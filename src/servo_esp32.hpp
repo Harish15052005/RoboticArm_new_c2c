@@ -7,7 +7,7 @@
 #define PWM_MAX 8191
 
 struct SERVO {
-  int min = 125, max = 1105, minAngle = 0, maxAngle = 225, pin, channel;
+  int min = 125, max = 1105, minAngle = 0, maxAngle = 180, pin, channel;
   float alpha = 0.98, filterdDuty = 0;
 };
 
