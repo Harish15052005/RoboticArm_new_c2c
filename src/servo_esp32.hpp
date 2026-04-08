@@ -12,8 +12,8 @@ struct SERVO {
 };
 
 void setServo(SERVO& s, int angle) {
-  if (angle < s.minAngle) angle = s.minAngle;
-  if (angle > s.maxAngle) angle = s.maxAngle;
+  if (angle < 0) angle = 0;
+  if (angle > 180) angle = 180;
   uint32_t duty = map(angle, s.minAngle, s.maxAngle, s.min, s.max);
 
   s.filterdDuty = s.filterdDuty * s.alpha + (1 - s.alpha) * duty;

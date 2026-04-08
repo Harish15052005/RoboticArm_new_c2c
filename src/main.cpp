@@ -14,7 +14,7 @@ SERVO base, shoulder, elbow, wristPitch, wristRoll, gripper;
 // ---------------- Arm Geometry ----------------
 // Fill these later after measuring your arm
 
-float BASE_HEIGHT = 5.88; // base axis -> shoulder joint height (cm)
+float BASE_HEIGHT = 11.5; // base axis -> shoulder joint height (cm)
 float L1 = 10.1;          // shoulder -> elbow link length (cm)
 float L2 = 13.2;          // elbow -> wrist pitch joint length (cm)
 float L3 = 16.3;          // wrist pitch joint -> gripper tip (cm)
@@ -51,58 +51,51 @@ inline float clampf(float v, float lo, float hi)
   return v;
 }
 
-// ======================================================
-// INVERSE KINEMATICS SOLVER
-// ======================================================
-
 bool solveIK(float x, float y, float zDeg, float phiDeg)
 {
-  // float phi = phiDeg * DEG2RAD;
+  float phi = phiDeg * DEG2RAD;
 
-  // // Base rotation (direct input)
-  // baseAngle = zDeg;
+  // Base rotation
+  baseAngle = zDeg;
 
-  // // Wrist center
-  // float wx = x - L3 * cosf(phi);
-  // float wy = (y - BASE_HEIGHT) - L3 * sinf(phi);
+  // Wrist center
+  float wx = x - L3 * cosf(phi);
+  float wy = (y - BASE_HEIGHT) - L3 * sinf(phi);
 
-  // // Cosine law for elbow
-  // float D = (wx*wx + wy*wy - L1*L1 - L2*L2) / (2 * L1 * L2);
-  // D = clampf(D, -1, 1);
+  float d = sqrtf(wx * wx + wy * wy);
 
-  // float elbowRad = acosf(D);
+  // Reachability check
+  if (d > L1 + L2 || d < fabs(L1 - L2))
+    return false;
 
-  // // Shoulder
   // float shoulderRad =
   //     atan2f(wy, wx) -
   //     atan2f(L2 * sinf(elbowRad), L1 + L2 * cosf(elbowRad));
 
-  // // Wrist
   // float wristRad = phi - shoulderRad - elbowRad;
 
-  // // Convert to degrees
-  // float shoulderGeom = shoulderRad * RAD2DEG;
-  // float elbowGeom = elbowRad * RAD2DEG;
-  // float wristGeom = wristRad * RAD2DEG;
+  
+  float shoulderRad =
+      atan2f(wy, wx) +
+      acosf((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d));
 
-  // // Apply servo reference frames
-  // shoulderAngle = 180.0 - shoulderGeom;
-  // elbowAngle = elbowGeom;
-  // wristPitchAngle = wristGeom + 90.0;
+  float elbowRad =
+      PI -
+      acosf((L1 * L1 + L2 * L2 - d * d) / (2 * L1 * L2));
 
-  float d = sqrtf(x * x + y * y);
-  if ((d < fabs(L2 - L1)) || (d > (L2 + L1)))
-    return false;
+  float wristRad = phi + shoulderRad - elbowRad;
 
-  shoulderAngle = atan2f(y, x) + acosf((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d));
-  elbowAngle = acosf((L1 * L1 - d * d + L2 * L2) / (2 * L1 * L2)) * 180.0f / PI;
-  shoulderAngle *= 180.0f / PI;
+  // Convert to degrees
+  shoulderAngle = shoulderRad * RAD2DEG;
+  elbowAngle = elbowRad * RAD2DEG;
 
-  wristPitchAngle = (elbowAngle - shoulderAngle);
-  baseAngle = zDeg;
+  // Wrist servo reference
+  wristPitchAngle = 90 + wristRad * RAD2DEG;
+
 
   return true;
 }
+
 void setup()
 {
   Serial.begin(115200);
@@ -120,10 +113,14 @@ void setup()
   base.max = 920;
   shoulder.min = 300;
   shoulder.max = 1100;
+  shoulder.minAngle = 180;
+  shoulder.maxAngle = 0;
   elbow.min = 290;
   elbow.max = 990;
   wristPitch.min = 430;
   wristPitch.max = 1190;
+  wristPitch.minAngle = 180;
+  wristPitch.maxAngle = 0;
   wristRoll.min = 340;
   wristRoll.max = 1050;
   gripper.min = 650;
