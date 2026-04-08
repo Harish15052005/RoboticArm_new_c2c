@@ -17,7 +17,7 @@ void setup() {
   setupServo(wristRoll, WRIST_ROLL_SERVO, 4);
   setupServo(gripper, GRIPPER_SERVO, 5);
   base.min = 190;base.minAngle = 0;base.max = 920;base.maxAngle = 180;
-  shoulder.min = 300;shoulder.minAngle = 0;shoulder.max = 1100;shoulder.maxAngle = 180;
+  shoulder.min = 300;shoulder.minAngle = 180;shoulder.max = 1100;shoulder.maxAngle = 0;
   elbow.min = 290;elbow.minAngle = 0;elbow.max = 990;elbow.maxAngle = 180;
   wristPitch.min = 430;wristPitch.minAngle = 0;wristPitch.max = 1190;wristPitch.maxAngle = 180;
   wristRoll.min = 340;wristRoll.minAngle = 0;wristRoll.max = 1050;wristRoll.maxAngle = 180;
