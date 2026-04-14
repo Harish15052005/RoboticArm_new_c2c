@@ -14,10 +14,10 @@ SERVO base, shoulder, elbow, wristPitch, wristRoll, gripper;
 // ---------------- Arm Geometry ----------------
 // Fill these later after measuring your arm
 
-float BASE_HEIGHT = 11.5; // base axis -> shoulder joint height (cm)
-float L1 = 10.1;          // shoulder -> elbow link length (cm)
-float L2 = 13.2;          // elbow -> wrist pitch joint length (cm)
-float L3 = 16.3;          // wrist pitch joint -> gripper tip (cm)
+float BASE_HEIGHT = 11.1; // base axis -> shoulder joint height (cm)
+float L1 = 10.50;          // shoulder -> elbow link length (cm)
+float L2 = 12.9;          // elbow -> wrist pitch joint length (cm)
+float L3 = 16.25;          // wrist pitch joint -> gripper tip (cm)
 
 // ---------------- Target Cartesian Pose ----------------
 
