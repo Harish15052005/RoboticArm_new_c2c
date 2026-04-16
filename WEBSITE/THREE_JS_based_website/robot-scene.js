@@ -12,7 +12,7 @@ const robotParts = {};
 
 export function initRobotScene(container) {
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x121212);
+    scene.background = new THREE.Color(0x151515);
 
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 500);
     camera.position.set(40, 30, 40);
@@ -178,6 +178,8 @@ export function updateJointAngle(jointId, angleDeg) {
             robotParts.j2.rotation.z = THREE.MathUtils.degToRad(90 - angleDeg);
             break;
         case 'j3': // ELBOW (Rotates on Z)
+            if (angleDeg > 160) angleDeg = 160; 
+            else if (angleDeg < 0) angleDeg = 0;
             robotParts.j3.rotation.z = rad;
             break;
         case 'j4': // WRIST PITCH (Rotates on Z)
