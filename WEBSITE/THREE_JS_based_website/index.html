@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6-DOF Robotic Arm | Modular Digital Twin</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --ui-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --border: #333;
+            --accent: #bb86fc;
+        }
+        
+        body {
+            margin: 0; padding: 0; overflow: hidden;
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; height: 100vh; width: 100vw;
+        }
+
+        #ui-container {
+            flex: 0 0 55%; background-color: var(--ui-bg);
+            border-right: 1px solid var(--border);
+            padding: 30px; box-sizing: border-box; overflow-y: auto;
+        }
+
+        #canvas-container {
+            flex: 0 0 45%; height: 100%; position: relative;
+        }
+
+        h1 { margin-top: 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+
+        /* Slider Styles */
+        .slider-group { margin-bottom: 25px; }
+        .slider-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; }
+        .slider-desc { font-size: 0.8rem; color: #888; margin-bottom: 8px; }
+        input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+        .value-display { font-family: monospace; font-size: 1.1rem; color: var(--accent); }
+    </style>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="ui-container">
+        <h1>Control Interface</h1>
+        
+        <div id="controls-wrapper">
+            </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import { initRobotScene, updateJointAngle } from './robot-scene.js';
+
+        // Initialize the 3D scene
+        const container = document.getElementById('canvas-container');
+        initRobotScene(container);
+
+        // Define the UI Sliders based on your specific kinematics
+        const jointConfig = [
+            { id: 'j1', name: 'Yaw', min: 0, max: 180, default: 90, desc: "0° is left, increases towards right." },
+            { id: 'j2', name: 'Shoulder', min: 0, max: 360, default: 90, desc: "0° is horizontal left, increases towards right." },
+            { id: 'j3', name: 'Elbow', min: 0, max: 180, default: 0, desc: "0° is inline with shoulder. Increases as it goes down." },
+            { id: 'j4', name: 'Wrist Pitch', min: 0, max: 180, default: 90, desc: "90° is inline with elbow. 0° is downward." },
+            { id: 'j5', name: 'Wrist Roll', min: 0, max: 360, default: 180, desc: "Full 360° continuous rotation." }
+        ];
+
+        const wrapper = document.getElementById('controls-wrapper');
+
+        // Build the sliders dynamically
+        jointConfig.forEach(joint => {
+            const group = document.createElement('div');
+            group.className = 'slider-group';
+            group.innerHTML = `
+                <div class="slider-header">
+                    <span>${joint.name}</span>
+                    <span class="value-display" id="val-${joint.id}">${joint.default}°</span>
+                </div>
+                <div class="slider-desc">${joint.desc}</div>
+                <input type="range" id="slider-${joint.id}" min="${joint.min}" max="${joint.max}" value="${joint.default}">
+            `;
+            wrapper.appendChild(group);
+
+            const slider = document.getElementById(`slider-${joint.id}`);
+            const display = document.getElementById(`val-${joint.id}`);
+
+            // Send initial default values to the 3D scene immediately
+            updateJointAngle(joint.id, joint.default);
+
+            // Listen for slider movement
+            slider.addEventListener('input', (e) => {
+                const angle = parseInt(e.target.value);
+                display.innerText = `${angle}°`;
+                updateJointAngle(joint.id, angle);
+            });
+        });
+    </script>
+
+</body>
+</html>
