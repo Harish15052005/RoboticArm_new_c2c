@@ -3,8 +3,8 @@
 #include "servo_esp32.hpp"
 
 // ---------------- Network Credentials ----------------
-const char* ssid = "ROBOCON LDCE";         // <-- Enter your WiFi SSID
-const char* password = "RBCN2025"; // <-- Enter your WiFi Password
+const char* ssid = "ROBOCON LDCE";         
+const char* password = "RBCN2025"; 
 
 // ---------------- Servo Pins ----------------
 #define BASE_SERVO 23
@@ -17,14 +17,12 @@ const char* password = "RBCN2025"; // <-- Enter your WiFi Password
 SERVO base, shoulder, elbow, wristPitch, wristRoll, gripper;
 
 // ---------------- Websocket Server ----------------
-// Listen on port 81 (standard for WebSockets)
 WebSocketsServer webSocket = WebSocketsServer(81);
 
 // ---------------- Target Joint Angles ----------------
-// Initialized to match your setup() defaults
-float baseAngle = 0;
-float shoulderAngle = 45;
-float elbowAngle = 120;
+float baseAngle = 70;
+float shoulderAngle = 125;
+float elbowAngle = 105;
 float wristPitchAngle = 90;
 float wristRollAngle = 0;
 float gripperAngle = 20;
@@ -42,12 +40,17 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
       }
       break;
     case WStype_TEXT:
-      // The browser sends data at 5Hz in this exact format: "S1,S2,S3,S4,S5,S6"
-      // Example payload: "90,45,120,90,180,30"
-      if (sscanf((const char *)payload, "%f,%f,%f,%f,%f,%f", 
-                 &baseAngle, &shoulderAngle, &elbowAngle, 
-                 &wristPitchAngle, &wristRollAngle, &gripperAngle) == 6) {
-        // Values successfully unpacked into the global target variables
+      {
+        // FAST PARSING: strtof is extremely fast and lightweight compared to sscanf.
+        // It reads the number, and updates the pointer to the next character (the comma).
+        char* ptr = (char*)payload;
+        
+        baseAngle       = strtof(ptr, &ptr); ptr++; // Read value, move pointer past comma
+        shoulderAngle   = strtof(ptr, &ptr); ptr++;
+        elbowAngle      = strtof(ptr, &ptr); ptr++;
+        wristPitchAngle = strtof(ptr, &ptr); ptr++;
+        wristRollAngle  = strtof(ptr, &ptr); ptr++;
+        gripperAngle    = strtof(ptr, NULL);        // Last value, no comma needed
       }
       break;
   }
@@ -56,16 +59,19 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length
 void setup() {
   Serial.begin(115200);
 
-  // 1. Initialize WiFi
+  // 1. Initialize WiFi & Disable Power Save (CRITICAL FOR LOW LATENCY)
   Serial.print("\nConnecting to WiFi");
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
+  // Turn off WiFi sleep mode to prevent packet buffering/lag spikes
+  WiFi.setSleep(false); 
+  
   Serial.println("\nWiFi Connected!");
   Serial.print("ESP32 IP Address: ");
-  Serial.println(WiFi.localIP()); // <-- Enter this IP into your Web Dashboard!
+  Serial.println(WiFi.localIP()); 
 
   // 2. Initialize WebSockets
   webSocket.begin();
@@ -80,7 +86,7 @@ void setup() {
   setupServo(wristRoll, WRIST_ROLL_SERVO, 4);
   setupServo(gripper, GRIPPER_SERVO, 5);
 
-  // 4. Exact Servo Calibration (Preserved)
+  // 4. Exact Servo Calibration
   base.min = 190;        base.minAngle = 0;        base.max = 920;        base.maxAngle = 180;
   shoulder.min = 300;    shoulder.minAngle = 0;    shoulder.max = 1100;   shoulder.maxAngle = 180;
   elbow.min = 290;       elbow.minAngle = 0;       elbow.max = 990;       elbow.maxAngle = 180;
@@ -101,10 +107,10 @@ unsigned long lastUpdateTime = 0;
 unsigned long prevPrintTime = 0;
 
 void loop() {
-  // Always keep the WebSocket server listening and processing incoming packets
+  // Always keep the WebSocket server listening
   webSocket.loop();
 
-  // Your preserved, high-frequency smoothing loop (12ms)
+  // High-frequency smoothing loop (12ms)
   if (millis() - lastUpdateTime > 12) {
     setServo(base, baseAngle);
     setServo(shoulder, shoulderAngle);
@@ -116,47 +122,15 @@ void loop() {
     lastUpdateTime = millis();
   }
 
-  // Print state to Serial Monitor for debugging (every 250ms)
+  // Print state to Serial Monitor for debugging (Reduced to every 500ms to stop blocking)
   if (millis() - prevPrintTime > 100) {
-    Serial.print("Current Targets -> Base: "); Serial.print(baseAngle);
-    Serial.print(" | Shoulder: "); Serial.print(shoulderAngle);
-    Serial.print(" | Elbow: "); Serial.print(elbowAngle);
-    Serial.print(" | Pitch: "); Serial.print(wristPitchAngle);
-    Serial.print(" | Roll: "); Serial.print(wristRollAngle);
-    Serial.print(" | Gripper: "); Serial.println(gripperAngle);
+    Serial.print("Targets -> Base: "); Serial.print(baseAngle);
+    Serial.print(" | Sh: "); Serial.print(shoulderAngle);
+    Serial.print(" | El: "); Serial.print(elbowAngle);
+    Serial.print(" | Pi: "); Serial.print(wristPitchAngle);
+    Serial.print(" | Ro: "); Serial.print(wristRollAngle);
+    Serial.print(" | Gr: "); Serial.println(gripperAngle);
 
     prevPrintTime = millis();
   }
 }
-
-
-// #include "servo_esp32.hpp"
-
-// #define BASE_SERVO 23
-// #define SHOULDER_SERVO 22
-// #define ELBOW_SERVO 21
-// #define WRIST_PITCH_SERVO 19
-// #define WRIST_ROLL_SERVO 18
-// #define GRIPPER_SERVO 5
-
-// SERVO base, shoulder, elbow, wristPitch, wristRoll, gripper;
-// void setup() {
-//   Serial.begin(115200);
-//   setupServo(base, BASE_SERVO, 0);
-//   setupServo(shoulder, SHOULDER_SERVO, 1);
-//   setupServo(elbow, ELBOW_SERVO, 2);
-//   setupServo(wristPitch, WRIST_PITCH_SERVO, 3);
-//   setupServo(wristRoll, WRIST_ROLL_SERVO, 4);
-//   setupServo(gripper, GRIPPER_SERVO, 5);
-// }
-
-// SERVO* servos[] = {&base, &shoulder, &elbow, &wristPitch, &wristRoll, &gripper};
-
-// int inp = 0, inp1 = 0;
-// void loop() {
-//   if(Serial.available()) {
-//     inp = Serial.parseInt();
-//     inp1 = Serial.parseInt();
-//   }
-//   ledcWrite(servos[inp]->channel, inp1);
-// }
