@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>6-DOF Robotic Arm | Control Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #121212; --ui-bg: #1e1e1e; --panel-bg: #2d2d2d;
+            --text-color: #e0e0e0; --text-muted: #888; --border: #444;
+            --accent: #bb86fc; --accent-hover: #9965f4; --canvas-bg: #151515;
+            --target-ok: #03dac6; --target-err: #cf6679;
+        }
+        
+        body {
+            margin: 0; padding: 0; overflow: hidden;
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; height: 100vh; width: 100vw;
+        }
+
+        #ui-container {
+            flex: 0 0 55%; background-color: var(--ui-bg); border-right: 1px solid var(--border);
+            padding: 20px; box-sizing: border-box; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 20px;
+        }
+
+        #canvas-container { flex: 0 0 45%; height: 100%; position: relative; }
+        h2 { margin: 0 0 10px 0; font-size: 1.1rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+        .top-views { display: flex; gap: 15px; height: 250px; }
+        .view-box {
+            flex: 1; background: var(--panel-bg); border: 1px solid var(--border);
+            border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;
+        }
+        .view-header { background: var(--border); padding: 5px 10px; font-size: 0.85rem; font-weight: bold; display: flex; justify-content: space-between; }
+        canvas { width: 100%; height: 100%; background: var(--canvas-bg); cursor: crosshair; }
+
+        .middle-tables { display: flex; gap: 15px; }
+        .table-box { flex: 1; background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: center; }
+        th { border-bottom: 1px solid var(--accent); padding: 6px; color: var(--accent); }
+        td { border-bottom: 1px solid var(--border); padding: 6px; font-family: monospace; }
+        tr:last-child td { border-bottom: none; }
+
+        .bottom-controls { display: flex; gap: 20px; background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; }
+        .sliders-grid { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 15px; }
+        .slider-group { display: flex; flex-direction: column; gap: 5px; }
+        .slider-header { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: bold; }
+        .slider-val { color: var(--accent); font-family: monospace; }
+        input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+        input[type="range"]:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .toggles-container { width: 180px; display: flex; flex-direction: column; justify-content: center; gap: 15px; border-left: 1px solid var(--border); padding-left: 15px; }
+        .toggle-row { display: flex; flex-direction: column; gap: 8px; }
+        .toggle-label { font-size: 0.85rem; font-weight: bold; }
+        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(26px); }
+        
+        .ws-input-group { display: flex; flex-direction: column; gap: 4px; }
+        .ws-input-group label { font-size: 0.75rem; color: var(--text-muted); font-weight: bold; }
+        .ws-input-group input { font-size: 0.8rem; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border); padding: 6px; border-radius: 4px; }
+
+        .ik-hint { color: var(--target-ok); font-size: 0.8rem; font-weight: normal; margin-left: 10px; display: none; }
+        #mode-toggle:checked ~ * .ik-hint { display: inline; }
+    </style>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="ui-container">
+        <section>
+            <h2>Telemetry Views <span id="ik-controls-hint" class="ik-hint">(Click canvas, WASD to move, Pitch Slider/QE for Phi)</span></h2>
+            <div class="top-views">
+                <div class="view-box">
+                    <div class="view-header"><span>Top View</span> <span>YAW</span></div>
+                    <canvas id="top-canvas"></canvas>
+                </div>
+                <div class="view-box">
+                    <div class="view-header"><span>Side View</span> <span>PLANAR IK/FK</span></div>
+                    <canvas id="side-canvas"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>System State</h2>
+            <div class="middle-tables">
+                <div class="table-box">
+                    <table>
+                        <thead><tr><th>Servo</th><th>Joint</th><th>Angle (°)</th></tr></thead>
+                        <tbody>
+                            <tr><td>S1</td><td>Yaw</td><td id="td-s1">90.0</td></tr>
+                            <tr><td>S2</td><td>Shoulder</td><td id="td-s2">90.0</td></tr>
+                            <tr><td>S3</td><td>Elbow</td><td id="td-s3">90.0</td></tr>
+                            <tr><td>S4</td><td>Pitch</td><td id="td-s4">90.0</td></tr>
+                            <tr><td>S5</td><td>Roll</td><td id="td-s5">180.0</td></tr>
+                            <tr><td>S6</td><td>Gripper</td><td id="td-s6">30.0</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-box">
+                    <table>
+                        <thead><tr><th>Axis</th><th>Value</th><th>Unit</th></tr></thead>
+                        <tbody>
+                            <tr><td>Target X</td><td id="td-x">10.50</td><td>cm</td></tr>
+                            <tr><td>Target Y</td><td id="td-y">10.50</td><td>cm</td></tr>
+                            <tr><td>Target Z</td><td id="td-z">0.00</td><td>cm</td></tr>
+                            <tr><td>Target Roll</td><td id="td-r">0.00</td><td>deg</td></tr>
+                            <tr><td>Target Phi</td><td id="td-p">0.00</td><td>deg</td></tr>
+                            <tr><td>Success</td><td id="td-ok" style="color:var(--target-ok);font-weight:bold;">TRUE</td><td>-</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Manual Control</h2>
+            <div class="bottom-controls">
+                <div class="sliders-grid">
+                    <div class="slider-group"><div class="slider-header"><span>Yaw</span> <span class="slider-val" id="val-s1">70°</span></div><input type="range" id="slider-s1" min="0" max="180" value="70"></div>
+                    <div class="slider-group"><div class="slider-header"><span>Shoulder</span> <span class="slider-val" id="val-s2">125°</span></div><input type="range" id="slider-s2" min="0" max="180" value="125"></div>
+                    <div class="slider-group"><div class="slider-header"><span>Elbow</span> <span class="slider-val" id="val-s3">105°</span></div><input type="range" id="slider-s3" min="0" max="160" value="105"></div>
+                    <div class="slider-group"><div class="slider-header"><span>Pitch (Phi)</span> <span class="slider-val" id="val-s4">55°</span></div><input type="range" id="slider-s4" min="0" max="180" value="55"></div>
+                    <div class="slider-group"><div class="slider-header"><span>Roll</span> <span class="slider-val" id="val-s5">180°</span></div><input type="range" id="slider-s5" min="0" max="180" value="180"></div>
+                    <div class="slider-group"><div class="slider-header"><span>Gripper</span> <span class="slider-val" id="val-s6">30%</span></div><input type="range" id="slider-s6" min="0" max="100" value="30"></div>
+                </div>
+
+                <div class="toggles-container">
+                    <div class="toggle-row">
+                        <span class="toggle-label">Kinematic Mode</span>
+                        <label class="switch"><input type="checkbox" id="mode-toggle"><span class="slider"></span></label>
+                    </div>
+                    <div class="toggle-row">
+                        <span class="toggle-label">WS Transmit</span>
+                        <label class="switch"><input type="checkbox" id="ws-toggle"><span class="slider"></span></label>
+                    </div>
+                    <div class="ws-input-group">
+                        <label for="ws-url">ESP32 WS Address</label>
+                        <input type="text" id="ws-url" placeholder="ws://192.168.1.100:81">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import { initRobotScene, updateJointAngle } from './robot-scene.js';
+
+        const container = document.getElementById('canvas-container');
+        initRobotScene(container);
+
+        // Constants from ESP32 & robot-scene.js
+        const BASE_HEIGHT = 11.41; // 5.610 + 5.8 
+        const L1 = 10.50; const L2 = 12.9; const L3 = 16.25;
+        const DEG2RAD = Math.PI / 180; const RAD2DEG = 180 / Math.PI;
+        const SCALE = 4.0; // Draw scaling
+
+        // System State
+        let isIKMode = false;
+        let isReachable = true;
+        const armState = { s1: 70, s2: 125, s3: 105, s4: 55, s5: 180, s6: 30 };
+        let target = { x: L1, y: BASE_HEIGHT - L2, phi: 0.0 };
+
+        // --- INVERSE KINEMATICS ---
+        function solveIK(x, y, phiDeg) {
+            let phi = phiDeg * DEG2RAD;
+            let wx = x - L3 * Math.cos(phi);
+            let wy = (y - BASE_HEIGHT) - L3 * Math.sin(phi);
+            let d = Math.sqrt(wx * wx + wy * wy);
+
+            if (d > L1 + L2 || d < Math.abs(L1 - L2)) return false;
+
+            let shoulderRad = Math.atan2(wy, wx) + Math.acos((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d));
+            let elbowRad = Math.PI - Math.acos((L1 * L1 + L2 * L2 - d * d) / (2 * L1 * L2));
+            
+            armState.s2 = Math.round(shoulderRad * RAD2DEG);
+            armState.s3 = Math.round(elbowRad * RAD2DEG);
+            
+            armState.s4 = Math.round(phiDeg - armState.s2 + armState.s3 + 90);
+            if(armState.s4 < 0) armState.s4 = 0; if(armState.s4 > 180) armState.s4 = 180;
+
+            return true;
+        }
+
+        // --- FORWARD KINEMATICS & RENDER ---
+        function updateTelemetry() {
+            let rad1 = armState.s2 * DEG2RAD;
+            let rad2 = (armState.s2 - armState.s3) * DEG2RAD;
+            let phiRad = (armState.s2 - armState.s3 + armState.s4 - 90) * DEG2RAD;
+
+            let p0 = { x: 0, y: BASE_HEIGHT };
+            let p1 = { x: p0.x + L1 * Math.cos(rad1), y: p0.y + L1 * Math.sin(rad1) };
+            let p2 = { x: p1.x + L2 * Math.cos(rad2), y: p1.y + L2 * Math.sin(rad2) };
+            let p3 = { x: p2.x + L3 * Math.cos(phiRad), y: p2.y + L3 * Math.sin(phiRad) };
+
+            const sideC = document.getElementById('side-canvas');
+            const sCtx = sideC.getContext('2d');
+            sideC.width = sideC.clientWidth; sideC.height = sideC.clientHeight;
+            sCtx.clearRect(0, 0, sideC.width, sideC.height);
+            
+            function mapToCanvas(mathPt) {
+                return {
+                    x: (sideC.width / 4) + (mathPt.x * SCALE),
+                    y: (sideC.height - 30) - (mathPt.y * SCALE)
+                };
+            }
+
+            let c0 = mapToCanvas(p0); let c1 = mapToCanvas(p1);
+            let c2 = mapToCanvas(p2); let c3 = mapToCanvas(p3);
+            let cBase = mapToCanvas({x: 0, y: 0});
+
+            sCtx.strokeStyle = '#777777'; sCtx.lineWidth = 12; sCtx.lineCap = 'square';
+            sCtx.beginPath(); sCtx.moveTo(cBase.x, cBase.y); sCtx.lineTo(c0.x, c0.y); sCtx.stroke();
+
+            sCtx.strokeStyle = '#bb86fc'; sCtx.lineWidth = 6; sCtx.lineCap = 'round';
+            sCtx.beginPath(); sCtx.moveTo(c0.x, c0.y); sCtx.lineTo(c1.x, c1.y);
+            sCtx.lineTo(c2.x, c2.y); sCtx.lineTo(c3.x, c3.y); sCtx.stroke();
+
+            sCtx.fillStyle = '#ffffff';
+            [c0, c1, c2].forEach(pt => { sCtx.beginPath(); sCtx.arc(pt.x, pt.y, 4, 0, Math.PI * 2); sCtx.fill(); });
+
+            if (isIKMode) {
+                let cTarget = mapToCanvas({ x: target.x, y: target.y });
+                sCtx.strokeStyle = isReachable ? 'var(--target-ok)' : 'var(--target-err)';
+                sCtx.lineWidth = 2;
+                sCtx.beginPath();
+                sCtx.moveTo(cTarget.x - 10, cTarget.y); sCtx.lineTo(cTarget.x + 10, cTarget.y);
+                sCtx.moveTo(cTarget.x, cTarget.y - 10); sCtx.lineTo(cTarget.x, cTarget.y + 10);
+                sCtx.stroke();
+                
+                sCtx.beginPath(); sCtx.moveTo(cTarget.x, cTarget.y);
+                let cTargetTail = mapToCanvas({ 
+                    x: target.x - 6 * Math.cos(target.phi * DEG2RAD), 
+                    y: target.y - 6 * Math.sin(target.phi * DEG2RAD) 
+                });
+                sCtx.lineTo(cTargetTail.x, cTargetTail.y); sCtx.stroke();
+            } else {
+                sCtx.fillStyle = 'var(--target-err)';
+                sCtx.beginPath(); sCtx.arc(c3.x, c3.y, 6, 0, Math.PI * 2); sCtx.fill();
+            }
+
+            const topC = document.getElementById('top-canvas');
+            const tCtx = topC.getContext('2d');
+            topC.width = topC.clientWidth; topC.height = topC.clientHeight;
+            tCtx.clearRect(0, 0, topC.width, topC.height);
+            tCtx.translate(topC.width / 2, topC.height - 30);
+
+            let yawRad = (90 - armState.s1) * DEG2RAD;
+            let extension = p3.x * SCALE; 
+
+            tCtx.strokeStyle = '#cccccc'; tCtx.lineWidth = 4; tCtx.lineCap = 'round';
+            tCtx.beginPath(); tCtx.moveTo(0, 0);
+            tCtx.lineTo(extension * Math.sin(yawRad), -extension * Math.cos(yawRad)); tCtx.stroke();
+
+            tCtx.fillStyle = '#bb86fc'; tCtx.beginPath(); tCtx.arc(0, 0, 8, 0, Math.PI * 2); tCtx.fill();
+            tCtx.fillStyle = 'var(--target-err)'; tCtx.beginPath(); tCtx.arc(extension * Math.sin(yawRad), -extension * Math.cos(yawRad), 5, 0, Math.PI*2); tCtx.fill();
+
+            ['s1', 's2', 's3', 's4', 's5', 's6'].forEach(s => {
+                let displayVal = armState[s];
+                if (isIKMode && s === 's4') displayVal = target.phi + 90; 
+
+                document.getElementById(`slider-${s}`).value = displayVal;
+                document.getElementById(`val-${s}`).innerText = `${displayVal}${s==='s6'?'%':'°'}`;
+                document.getElementById(`td-${s}`).innerText = `${armState[s]}.0`;
+                if(s !== 's6') updateJointAngle(s.replace('s', 'j'), armState[s]);
+            });
+
+            document.getElementById('td-x').innerText = (isIKMode ? target.x : p3.x).toFixed(2);
+            document.getElementById('td-y').innerText = (isIKMode ? target.y : p3.y).toFixed(2);
+            document.getElementById('td-p').innerText = (isIKMode ? target.phi : phiRad * RAD2DEG).toFixed(2);
+            
+            const okEl = document.getElementById('td-ok');
+            okEl.innerText = isReachable ? "TRUE" : "FALSE";
+            okEl.style.color = isReachable ? "var(--target-ok)" : "var(--target-err)";
+        }
+
+        // --- INTERACTIVITY LOGIC ---
+
+        document.getElementById('mode-toggle').addEventListener('change', (e) => {
+            isIKMode = e.target.checked;
+            document.getElementById('ik-controls-hint').style.display = isIKMode ? 'inline' : 'none';
+            
+            ['s2', 's3'].forEach(s => { document.getElementById(`slider-${s}`).disabled = isIKMode; });
+            
+            if (isIKMode) {
+                let rad1 = armState.s2 * DEG2RAD;
+                let rad2 = (armState.s2 - armState.s3) * DEG2RAD;
+                let phiRad = (armState.s2 - armState.s3 + armState.s4 - 90) * DEG2RAD;
+                
+                target.x = L1 * Math.cos(rad1) + L2 * Math.cos(rad2) + L3 * Math.cos(phiRad);
+                target.y = BASE_HEIGHT + L1 * Math.sin(rad1) + L2 * Math.sin(rad2) + L3 * Math.sin(phiRad);
+                target.phi = phiRad * RAD2DEG;
+            }
+            updateTelemetry();
+        });
+
+        document.getElementById('side-canvas').addEventListener('mousedown', (e) => {
+            if(!isIKMode) return;
+            const canvas = document.getElementById('side-canvas');
+            const rect = canvas.getBoundingClientRect();
+            target.x = ((e.clientX - rect.left) - canvas.width / 4) / SCALE;
+            target.y = ((canvas.height - 30) - (e.clientY - rect.top)) / SCALE;
+            isReachable = solveIK(target.x, target.y, target.phi);
+            updateTelemetry();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (!isIKMode) return;
+            const step = 0.5;
+            switch(e.key.toLowerCase()) {
+                case 'w': target.y += step; break;
+                case 's': target.y -= step; break;
+                case 'd': target.x += step; break;
+                case 'a': target.x -= step; break;
+                case 'q': target.phi += step * 5; break;
+                case 'e': target.phi -= step * 5; break;
+                default: return;
+            }
+            isReachable = solveIK(target.x, target.y, target.phi);
+            updateTelemetry();
+        });
+
+        ['s1', 's2', 's3', 's4', 's5', 's6'].forEach(s => {
+            document.getElementById(`slider-${s}`).addEventListener('input', (e) => {
+                let val = parseInt(e.target.value);
+                
+                if (isIKMode) {
+                    if (s === 's4') target.phi = val - 90; 
+                    else armState[s] = val; 
+                    isReachable = solveIK(target.x, target.y, target.phi);
+                } else {
+                    armState[s] = val;
+                }
+                updateTelemetry();
+            });
+        });
+
+        // --- WEBSOCKET LOGIC ---
+        let ws = null;
+        let wsConnected = false;
+        const wsToggle = document.getElementById('ws-toggle');
+        const wsUrlInput = document.getElementById('ws-url');
+
+        // Load saved URL from localStorage
+        const savedUrl = localStorage.getItem('esp32_ws_url');
+        if (savedUrl) {
+            wsUrlInput.value = savedUrl;
+        } else {
+            wsUrlInput.value = "ws://192.168.1.100:81";
+        }
+
+        // Save URL to localStorage when changed
+        wsUrlInput.addEventListener('input', (e) => {
+            localStorage.setItem('esp32_ws_url', e.target.value);
+        });
+
+        wsToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                // Safety Warning Check
+                const proceed = confirm(
+                    "⚠️ SAFETY WARNING ⚠️\n\n" +
+                    "You are about to transmit live commands to the physical robot.\n\n" +
+                    "1. Ensure the PHYSICAL arm is currently resting in the EXACT SAME POSE as the digital twin to avoid violent jerks or stripped gears.\n" +
+                    "2. Keep hands and objects clear of the robot's workspace.\n" +
+                    "3. Ensure power supplies are stable.\n\n" +
+                    "Do you wish to proceed?"
+                );
+
+                if (!proceed) {
+                    e.target.checked = false; // Revert toggle
+                    return;
+                }
+
+                const url = wsUrlInput.value;
+                ws = new WebSocket(url);
+                
+                ws.onopen = () => {
+                    wsConnected = true;
+                    console.log("WebSocket Connected!");
+                    wsUrlInput.style.borderColor = "var(--target-ok)";
+                };
+                
+                ws.onclose = () => {
+                    wsConnected = false;
+                    wsToggle.checked = false;
+                    wsUrlInput.style.borderColor = "var(--border)";
+                    console.log("WebSocket Disconnected.");
+                };
+                
+                ws.onerror = (err) => {
+                    console.error("WebSocket Error: ", err);
+                    wsConnected = false;
+                    wsToggle.checked = false;
+                    wsUrlInput.style.borderColor = "var(--target-err)";
+                };
+            } else {
+                if (ws) ws.close();
+                wsConnected = false;
+                wsUrlInput.style.borderColor = "var(--border)";
+            }
+        });
+
+        // 5Hz Data Transmission Loop (200ms)
+        setInterval(() => {
+            if (wsConnected && ws.readyState === WebSocket.OPEN) {
+                // Payload format: "s1,s2,s3,s4,s5,s6" (e.g. "90,90,90,90,180,30")
+                const payload = `${armState.s1},${armState.s2},${armState.s3},${armState.s4},${armState.s5},${armState.s6}`;
+                ws.send(payload);
+            }
+        }, 200);
+
+        setTimeout(updateTelemetry, 100); 
+        window.addEventListener('resize', updateTelemetry);
+    </script>
+</body>
+</html>
