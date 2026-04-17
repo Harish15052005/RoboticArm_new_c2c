@@ -7,12 +7,11 @@
 #define PWM_MAX 8191
 
 struct SERVO {
-  int min = 125, max = 1105, minAngle = 0, maxAngle = 225, pin, channel, offset;
+  int min = 125, max = 1105, minAngle = 0, maxAngle = 180, pin, channel;
   float alpha = 0.98, filterdDuty = 0;
 };
 
 void setServo(SERVO& s, int angle) {
-  angle += s.offset;
   if (angle < 0) angle = 0;
   if (angle > 180) angle = 180;
   uint32_t duty = map(angle, s.minAngle, s.maxAngle, s.min, s.max);
