@@ -51,7 +51,7 @@
         input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
         input[type="range"]:disabled { opacity: 0.3; cursor: not-allowed; }
 
-        .toggles-container { width: 150px; display: flex; flex-direction: column; justify-content: center; gap: 20px; border-left: 1px solid var(--border); padding-left: 15px; }
+        .toggles-container { width: 180px; display: flex; flex-direction: column; justify-content: center; gap: 15px; border-left: 1px solid var(--border); padding-left: 15px; }
         .toggle-row { display: flex; flex-direction: column; gap: 8px; }
         .toggle-label { font-size: 0.85rem; font-weight: bold; }
         .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
@@ -61,6 +61,10 @@
         input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(26px); }
         
+        .ws-input-group { display: flex; flex-direction: column; gap: 4px; }
+        .ws-input-group label { font-size: 0.75rem; color: var(--text-muted); font-weight: bold; }
+        .ws-input-group input { font-size: 0.8rem; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border); padding: 6px; border-radius: 4px; }
+
         .ik-hint { color: var(--target-ok); font-size: 0.8rem; font-weight: normal; margin-left: 10px; display: none; }
         #mode-toggle:checked ~ * .ik-hint { display: inline; }
     </style>
@@ -127,11 +131,11 @@
             <h2>Manual Control</h2>
             <div class="bottom-controls">
                 <div class="sliders-grid">
-                    <div class="slider-group"><div class="slider-header"><span>Yaw</span> <span class="slider-val" id="val-s1">90°</span></div><input type="range" id="slider-s1" min="0" max="180" value="90"></div>
-                    <div class="slider-group"><div class="slider-header"><span>Shoulder</span> <span class="slider-val" id="val-s2">90°</span></div><input type="range" id="slider-s2" min="0" max="360" value="90"></div>
-                    <div class="slider-group"><div class="slider-header"><span>Elbow</span> <span class="slider-val" id="val-s3">90°</span></div><input type="range" id="slider-s3" min="0" max="180" value="90"></div>
-                    <div class="slider-group"><div class="slider-header"><span>Pitch (Phi)</span> <span class="slider-val" id="val-s4">90°</span></div><input type="range" id="slider-s4" min="0" max="180" value="90"></div>
-                    <div class="slider-group"><div class="slider-header"><span>Roll</span> <span class="slider-val" id="val-s5">180°</span></div><input type="range" id="slider-s5" min="0" max="360" value="180"></div>
+                    <div class="slider-group"><div class="slider-header"><span>Yaw</span> <span class="slider-val" id="val-s1">70°</span></div><input type="range" id="slider-s1" min="0" max="180" value="70"></div>
+                    <div class="slider-group"><div class="slider-header"><span>Shoulder</span> <span class="slider-val" id="val-s2">125°</span></div><input type="range" id="slider-s2" min="0" max="180" value="125"></div>
+                    <div class="slider-group"><div class="slider-header"><span>Elbow</span> <span class="slider-val" id="val-s3">105°</span></div><input type="range" id="slider-s3" min="0" max="160" value="105"></div>
+                    <div class="slider-group"><div class="slider-header"><span>Pitch (Phi)</span> <span class="slider-val" id="val-s4">55°</span></div><input type="range" id="slider-s4" min="0" max="180" value="55"></div>
+                    <div class="slider-group"><div class="slider-header"><span>Roll</span> <span class="slider-val" id="val-s5">180°</span></div><input type="range" id="slider-s5" min="0" max="180" value="180"></div>
                     <div class="slider-group"><div class="slider-header"><span>Gripper</span> <span class="slider-val" id="val-s6">30%</span></div><input type="range" id="slider-s6" min="0" max="100" value="30"></div>
                 </div>
 
@@ -143,6 +147,10 @@
                     <div class="toggle-row">
                         <span class="toggle-label">WS Transmit</span>
                         <label class="switch"><input type="checkbox" id="ws-toggle"><span class="slider"></span></label>
+                    </div>
+                    <div class="ws-input-group">
+                        <label for="ws-url">ESP32 WS Address</label>
+                        <input type="text" id="ws-url" placeholder="ws://192.168.1.100:81">
                     </div>
                 </div>
             </div>
@@ -167,7 +175,7 @@
         // System State
         let isIKMode = false;
         let isReachable = true;
-        const armState = { s1: 90, s2: 90, s3: 90, s4: 90, s5: 180, s6: 30 };
+        const armState = { s1: 70, s2: 125, s3: 105, s4: 55, s5: 180, s6: 30 };
         let target = { x: L1, y: BASE_HEIGHT - L2, phi: 0.0 };
 
         // --- INVERSE KINEMATICS ---
@@ -185,7 +193,6 @@
             armState.s2 = Math.round(shoulderRad * RAD2DEG);
             armState.s3 = Math.round(elbowRad * RAD2DEG);
             
-            // Map Absolute Phi back to physical servo angle
             armState.s4 = Math.round(phiDeg - armState.s2 + armState.s3 + 90);
             if(armState.s4 < 0) armState.s4 = 0; if(armState.s4 > 180) armState.s4 = 180;
 
@@ -194,8 +201,6 @@
 
         // --- FORWARD KINEMATICS & RENDER ---
         function updateTelemetry() {
-            // 1. Math Coordinates (Y goes UP, X goes RIGHT)
-            // Absolute angles derived strictly to prevent local angle shifting
             let rad1 = armState.s2 * DEG2RAD;
             let rad2 = (armState.s2 - armState.s3) * DEG2RAD;
             let phiRad = (armState.s2 - armState.s3 + armState.s4 - 90) * DEG2RAD;
@@ -205,7 +210,6 @@
             let p2 = { x: p1.x + L2 * Math.cos(rad2), y: p1.y + L2 * Math.sin(rad2) };
             let p3 = { x: p2.x + L3 * Math.cos(phiRad), y: p2.y + L3 * Math.sin(phiRad) };
 
-            // 2. Render Side View
             const sideC = document.getElementById('side-canvas');
             const sCtx = sideC.getContext('2d');
             sideC.width = sideC.clientWidth; sideC.height = sideC.clientHeight;
@@ -241,7 +245,6 @@
                 sCtx.moveTo(cTarget.x, cTarget.y - 10); sCtx.lineTo(cTarget.x, cTarget.y + 10);
                 sCtx.stroke();
                 
-                // Draw target Phi indicator
                 sCtx.beginPath(); sCtx.moveTo(cTarget.x, cTarget.y);
                 let cTargetTail = mapToCanvas({ 
                     x: target.x - 6 * Math.cos(target.phi * DEG2RAD), 
@@ -253,14 +256,12 @@
                 sCtx.beginPath(); sCtx.arc(c3.x, c3.y, 6, 0, Math.PI * 2); sCtx.fill();
             }
 
-            // 3. Update Top View
             const topC = document.getElementById('top-canvas');
             const tCtx = topC.getContext('2d');
             topC.width = topC.clientWidth; topC.height = topC.clientHeight;
             tCtx.clearRect(0, 0, topC.width, topC.height);
             tCtx.translate(topC.width / 2, topC.height - 30);
 
-            // Corrected visual yaw: 0 points right, 180 points left.
             let yawRad = (90 - armState.s1) * DEG2RAD;
             let extension = p3.x * SCALE; 
 
@@ -271,10 +272,8 @@
             tCtx.fillStyle = '#bb86fc'; tCtx.beginPath(); tCtx.arc(0, 0, 8, 0, Math.PI * 2); tCtx.fill();
             tCtx.fillStyle = 'var(--target-err)'; tCtx.beginPath(); tCtx.arc(extension * Math.sin(yawRad), -extension * Math.cos(yawRad), 5, 0, Math.PI*2); tCtx.fill();
 
-            // 4. Sync Sliders & Tables
             ['s1', 's2', 's3', 's4', 's5', 's6'].forEach(s => {
                 let displayVal = armState[s];
-                // In IK mode, fake the Pitch slider display to show the target Phi instead of physical angle
                 if (isIKMode && s === 's4') displayVal = target.phi + 90; 
 
                 document.getElementById(`slider-${s}`).value = displayVal;
@@ -294,12 +293,10 @@
 
         // --- INTERACTIVITY LOGIC ---
 
-        // Toggle Modes
         document.getElementById('mode-toggle').addEventListener('change', (e) => {
             isIKMode = e.target.checked;
             document.getElementById('ik-controls-hint').style.display = isIKMode ? 'inline' : 'none';
             
-            // Disable Shoulder and Elbow. S4 (Pitch) stays active to act as Target Phi!
             ['s2', 's3'].forEach(s => { document.getElementById(`slider-${s}`).disabled = isIKMode; });
             
             if (isIKMode) {
@@ -314,7 +311,6 @@
             updateTelemetry();
         });
 
-        // Click on Canvas to move IK target
         document.getElementById('side-canvas').addEventListener('mousedown', (e) => {
             if(!isIKMode) return;
             const canvas = document.getElementById('side-canvas');
@@ -325,7 +321,6 @@
             updateTelemetry();
         });
 
-        // Keyboard Controls
         document.addEventListener('keydown', (e) => {
             if (!isIKMode) return;
             const step = 0.5;
@@ -342,14 +337,13 @@
             updateTelemetry();
         });
 
-        // Sliders
         ['s1', 's2', 's3', 's4', 's5', 's6'].forEach(s => {
             document.getElementById(`slider-${s}`).addEventListener('input', (e) => {
                 let val = parseInt(e.target.value);
                 
                 if (isIKMode) {
-                    if (s === 's4') target.phi = val - 90; // Override Pitch slider to drive Target Phi (-90 to +90)
-                    else armState[s] = val; // S1, S5, S6 still do standard FK
+                    if (s === 's4') target.phi = val - 90; 
+                    else armState[s] = val; 
                     isReachable = solveIK(target.x, target.y, target.phi);
                 } else {
                     armState[s] = val;
@@ -357,6 +351,80 @@
                 updateTelemetry();
             });
         });
+
+        // --- WEBSOCKET LOGIC ---
+        let ws = null;
+        let wsConnected = false;
+        const wsToggle = document.getElementById('ws-toggle');
+        const wsUrlInput = document.getElementById('ws-url');
+
+        // Load saved URL from localStorage
+        const savedUrl = localStorage.getItem('esp32_ws_url');
+        if (savedUrl) {
+            wsUrlInput.value = savedUrl;
+        } else {
+            wsUrlInput.value = "ws://192.168.1.100:81";
+        }
+
+        // Save URL to localStorage when changed
+        wsUrlInput.addEventListener('input', (e) => {
+            localStorage.setItem('esp32_ws_url', e.target.value);
+        });
+
+        wsToggle.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                // Safety Warning Check
+                const proceed = confirm(
+                    "⚠️ SAFETY WARNING ⚠️\n\n" +
+                    "You are about to transmit live commands to the physical robot.\n\n" +
+                    "1. Ensure the PHYSICAL arm is currently resting in the EXACT SAME POSE as the digital twin to avoid violent jerks or stripped gears.\n" +
+                    "2. Keep hands and objects clear of the robot's workspace.\n" +
+                    "3. Ensure power supplies are stable.\n\n" +
+                    "Do you wish to proceed?"
+                );
+
+                if (!proceed) {
+                    e.target.checked = false; // Revert toggle
+                    return;
+                }
+
+                const url = wsUrlInput.value;
+                ws = new WebSocket(url);
+                
+                ws.onopen = () => {
+                    wsConnected = true;
+                    console.log("WebSocket Connected!");
+                    wsUrlInput.style.borderColor = "var(--target-ok)";
+                };
+                
+                ws.onclose = () => {
+                    wsConnected = false;
+                    wsToggle.checked = false;
+                    wsUrlInput.style.borderColor = "var(--border)";
+                    console.log("WebSocket Disconnected.");
+                };
+                
+                ws.onerror = (err) => {
+                    console.error("WebSocket Error: ", err);
+                    wsConnected = false;
+                    wsToggle.checked = false;
+                    wsUrlInput.style.borderColor = "var(--target-err)";
+                };
+            } else {
+                if (ws) ws.close();
+                wsConnected = false;
+                wsUrlInput.style.borderColor = "var(--border)";
+            }
+        });
+
+        // 5Hz Data Transmission Loop (200ms)
+        setInterval(() => {
+            if (wsConnected && ws.readyState === WebSocket.OPEN) {
+                // Payload format: "s1,s2,s3,s4,s5,s6" (e.g. "90,90,90,90,180,30")
+                const payload = `${armState.s1},${armState.s2},${armState.s3},${armState.s4},${armState.s5},${armState.s6}`;
+                ws.send(payload);
+            }
+        }, 200);
 
         setTimeout(updateTelemetry, 100); 
         window.addEventListener('resize', updateTelemetry);

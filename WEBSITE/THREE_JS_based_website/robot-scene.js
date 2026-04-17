@@ -12,7 +12,7 @@ const robotParts = {};
 
 export function initRobotScene(container) {
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x151515);
+    scene.background = new THREE.Color(0x8ccbde);
 
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 500);
     camera.position.set(40, 30, 40);
@@ -28,19 +28,21 @@ export function initRobotScene(container) {
     controls.update();
 
     // 1. Increase AmbientLight (lifts overall darkness globally)
-    scene.add(new THREE.AmbientLight(0xffffff, 1.5)); 
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
+    hemiLight.position.set(0, 50, 0);
+    scene.add(hemiLight);
 
     // 2. Increase Main DirectionalLight (acts as the sun)
-    const dirLight = new THREE.DirectionalLight(0xffffff, 2.5);
+    const dirLight = new THREE.DirectionalLight(0xfffae6, 3.5);
     dirLight.position.set(20, 40, 20);
     scene.add(dirLight);
-    
+
     // 3. ADD a secondary Fill Light from the opposite side to soften shadows
-    const fillLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    const fillLight = new THREE.DirectionalLight(0xcceeff, 1.5);
     fillLight.position.set(-20, 20, -20);
     scene.add(fillLight);
 
-    scene.add(new THREE.GridHelper(100, 100, 0x444444, 0x222222));
+    scene.add(new THREE.GridHelper(80, 20, 0x444444, 0x222222));
 
     buildRobotKinematics(scene);
     loadGLTFModels();
@@ -80,7 +82,7 @@ function buildRobotKinematics(scene) {
 
     // J3: Elbow Pivot
     robotParts.j3 = new THREE.Group();
-    robotParts.j3.position.y = L1 -0.25;
+    robotParts.j3.position.y = L1 - 0.25;
     robotParts.j3.position.x = -2.5;
     robotParts.j2.add(robotParts.j3);
 
@@ -98,6 +100,11 @@ function buildRobotKinematics(scene) {
     robotParts.j6 = new THREE.Group();
     robotParts.j6.position.y = L3;
     robotParts.j5.add(robotParts.j6);
+
+    robotParts.gripperJaw = new THREE.Group();
+    robotParts.gripperJaw.position.y = -14.5;
+    robotParts.gripperJaw.position.z = 2.5;
+    robotParts.j6.add(robotParts.gripperJaw);
 
     // We optionally add small AxesHelpers to each joint so you can see the invisible pivots.
     // Red=X, Green=Y, Blue=Z. Comment these out once your models look right.
@@ -157,7 +164,14 @@ function loadGLTFModels() {
         mesh.rotation.z = THREE.MathUtils.degToRad(90);
         mesh.rotation.x = THREE.MathUtils.degToRad(-90);
         // mesh.rotation.z = THREE.MathUtils.degToRad(-90);
-        robotParts.j5.add(mesh);   
+        robotParts.j5.add(mesh);
+    });
+
+    loader.load('./models/Jaw.glb', (gltf) => {
+        const mesh = gltf.scene;
+        mesh.rotation.y = THREE.MathUtils.degToRad(90);
+        // mesh.rotation.x = THREE.MathUtils.degToRad(-90);
+        robotParts.gripperJaw.add(mesh);
     });
 }
 
@@ -172,13 +186,13 @@ export function updateJointAngle(jointId, angleDeg) {
 
     switch (jointId) {
         case 'j1': // YAW (Rotates on Y)
-            robotParts.j1.rotation.y = THREE.MathUtils.degToRad(90+angleDeg);
+            robotParts.j1.rotation.y = THREE.MathUtils.degToRad(90 + angleDeg);
             break;
         case 'j2': // SHOULDER (Rotates on Z)
             robotParts.j2.rotation.z = THREE.MathUtils.degToRad(90 - angleDeg);
             break;
         case 'j3': // ELBOW (Rotates on Z)
-            if (angleDeg > 160) angleDeg = 160; 
+            if (angleDeg > 160) angleDeg = 160;
             else if (angleDeg < 0) angleDeg = 0;
             robotParts.j3.rotation.z = rad;
             break;
