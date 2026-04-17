@@ -169,7 +169,7 @@ function loadGLTFModels() {
 
     loader.load('./models/Jaw.glb', (gltf) => {
         const mesh = gltf.scene;
-        mesh.rotation.y = THREE.MathUtils.degToRad(90);
+        mesh.rotation.y = THREE.MathUtils.degToRad(-90);
         // mesh.rotation.x = THREE.MathUtils.degToRad(-90);
         robotParts.gripperJaw.add(mesh);
     });

@@ -136,7 +136,7 @@
                     <div class="slider-group"><div class="slider-header"><span>Elbow</span> <span class="slider-val" id="val-s3">105°</span></div><input type="range" id="slider-s3" min="0" max="160" value="105"></div>
                     <div class="slider-group"><div class="slider-header"><span>Pitch (Phi)</span> <span class="slider-val" id="val-s4">55°</span></div><input type="range" id="slider-s4" min="0" max="180" value="55"></div>
                     <div class="slider-group"><div class="slider-header"><span>Roll</span> <span class="slider-val" id="val-s5">180°</span></div><input type="range" id="slider-s5" min="0" max="180" value="180"></div>
-                    <div class="slider-group"><div class="slider-header"><span>Gripper</span> <span class="slider-val" id="val-s6">30%</span></div><input type="range" id="slider-s6" min="0" max="100" value="30"></div>
+                    <div class="slider-group"><div class="slider-header"><span>Gripper</span> <span class="slider-val" id="val-s6">180°</span></div><input type="range" id="slider-s6" min="0" max="180" value="180"></div>
                 </div>
 
                 <div class="toggles-container">
@@ -417,14 +417,13 @@
             }
         });
 
-        // 5Hz Data Transmission Loop (200ms)
         setInterval(() => {
             if (wsConnected && ws.readyState === WebSocket.OPEN) {
                 // Payload format: "s1,s2,s3,s4,s5,s6" (e.g. "90,90,90,90,180,30")
                 const payload = `${armState.s1},${armState.s2},${armState.s3},${armState.s4},${armState.s5},${armState.s6}`;
                 ws.send(payload);
             }
-        }, 200);
+        }, 5);
 
         setTimeout(updateTelemetry, 100); 
         window.addEventListener('resize', updateTelemetry);
