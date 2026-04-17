@@ -172,7 +172,7 @@ export function updateJointAngle(jointId, angleDeg) {
 
     switch (jointId) {
         case 'j1': // YAW (Rotates on Y)
-            robotParts.j1.rotation.y = THREE.MathUtils.degToRad(90 - angleDeg);
+            robotParts.j1.rotation.y = THREE.MathUtils.degToRad(90+angleDeg);
             break;
         case 'j2': // SHOULDER (Rotates on Z)
             robotParts.j2.rotation.z = THREE.MathUtils.degToRad(90 - angleDeg);
