@@ -8,7 +8,7 @@
         :root {
             --bg-color: #121212; --ui-bg: #1e1e1e; --panel-bg: #2d2d2d;
             --text-color: #e0e0e0; --text-muted: #888; --border: #444;
-            --accent: #bb86fc; --accent-hover: #9965f4; --canvas-bg: #151515;
+            --accent: #41b4f7; --accent-hover: #00ecfd; --canvas-bg: #151515;
             --target-ok: #03dac6; --target-err: #cf6679;
         }
         
@@ -136,7 +136,7 @@
                     <div class="slider-group"><div class="slider-header"><span>Elbow</span> <span class="slider-val" id="val-s3">105°</span></div><input type="range" id="slider-s3" min="0" max="160" value="105"></div>
                     <div class="slider-group"><div class="slider-header"><span>Pitch (Phi)</span> <span class="slider-val" id="val-s4">55°</span></div><input type="range" id="slider-s4" min="0" max="180" value="55"></div>
                     <div class="slider-group"><div class="slider-header"><span>Roll</span> <span class="slider-val" id="val-s5">180°</span></div><input type="range" id="slider-s5" min="0" max="180" value="180"></div>
-                    <div class="slider-group"><div class="slider-header"><span>Gripper</span> <span class="slider-val" id="val-s6">180°</span></div><input type="range" id="slider-s6" min="0" max="180" value="180"></div>
+                    <div class="slider-group"><div class="slider-header"><span>Gripper</span> <span class="slider-val" id="val-s6">0°</span></div><input type="range" id="slider-s6" min="0" max="180" value="0"></div>
                 </div>
 
                 <div class="toggles-container">
@@ -157,7 +157,7 @@
         </section>
 
         <section>
-            <h2>BY <br>TEAM ROBOCON LDCE</h2>
+            <h2>BY <br>Kumawat Harish</h2>
             
         </section>
 
@@ -180,7 +180,7 @@
         // System State
         let isIKMode = false;
         let isReachable = true;
-        const armState = { s1: 70, s2: 125, s3: 105, s4: 55, s5: 180, s6: 30 };
+        const armState = { s1: 70, s2: 125, s3: 105, s4: 55, s5: 180, s6: 0 };
         let target = { x: L1, y: BASE_HEIGHT - L2, phi: 0.0 };
 
         // --- INVERSE KINEMATICS ---
@@ -234,7 +234,7 @@
             sCtx.strokeStyle = '#777777'; sCtx.lineWidth = 12; sCtx.lineCap = 'square';
             sCtx.beginPath(); sCtx.moveTo(cBase.x, cBase.y); sCtx.lineTo(c0.x, c0.y); sCtx.stroke();
 
-            sCtx.strokeStyle = '#bb86fc'; sCtx.lineWidth = 6; sCtx.lineCap = 'round';
+            sCtx.strokeStyle = '#41b4f7'; sCtx.lineWidth = 6; sCtx.lineCap = 'round';
             sCtx.beginPath(); sCtx.moveTo(c0.x, c0.y); sCtx.lineTo(c1.x, c1.y);
             sCtx.lineTo(c2.x, c2.y); sCtx.lineTo(c3.x, c3.y); sCtx.stroke();
 
@@ -274,7 +274,7 @@
             tCtx.beginPath(); tCtx.moveTo(0, 0);
             tCtx.lineTo(extension * Math.sin(yawRad), -extension * Math.cos(yawRad)); tCtx.stroke();
 
-            tCtx.fillStyle = '#bb86fc'; tCtx.beginPath(); tCtx.arc(0, 0, 8, 0, Math.PI * 2); tCtx.fill();
+            tCtx.fillStyle = '#41b4f7'; tCtx.beginPath(); tCtx.arc(0, 0, 8, 0, Math.PI * 2); tCtx.fill();
             tCtx.fillStyle = 'var(--target-err)'; tCtx.beginPath(); tCtx.arc(extension * Math.sin(yawRad), -extension * Math.cos(yawRad), 5, 0, Math.PI*2); tCtx.fill();
 
             ['s1', 's2', 's3', 's4', 's5', 's6'].forEach(s => {
@@ -284,7 +284,7 @@
                 document.getElementById(`slider-${s}`).value = displayVal;
                 document.getElementById(`val-${s}`).innerText = `${displayVal}${s==='s6'?'%':'°'}`;
                 document.getElementById(`td-${s}`).innerText = `${armState[s]}.0`;
-                if(s !== 's6') updateJointAngle(s.replace('s', 'j'), armState[s]);
+                updateJointAngle(s.replace('s', 'j'), armState[s]);
             });
 
             document.getElementById('td-x').innerText = (isIKMode ? target.x : p3.x).toFixed(2);
@@ -296,6 +296,8 @@
             okEl.style.color = isReachable ? "var(--target-ok)" : "var(--target-err)";
         }
 
+        
+        
         // --- INTERACTIVITY LOGIC ---
 
         document.getElementById('mode-toggle').addEventListener('change', (e) => {
@@ -380,7 +382,7 @@
             if (e.target.checked) {
                 // Safety Warning Check
                 const proceed = confirm(
-                    "⚠️ SAFETY WARNING ⚠️\n\n" +
+                    "SAFETY WARNING\n\n" +
                     "You are about to transmit live commands to the physical robot.\n\n" +
                     "1. Ensure the PHYSICAL arm is currently resting in the EXACT SAME POSE as the digital twin to avoid violent jerks or stripped gears.\n" +
                     "2. Keep hands and objects clear of the robot's workspace.\n" +

@@ -9,14 +9,19 @@ const L2 = 12.9;
 const L3 = 16.25;
 
 const robotParts = {};
+window.DEBUG_ROBOT = robotParts;
+window.DEBUG_SCENE = null;
+window.DEBUG_CAMERA = null;
 
 export function initRobotScene(container) {
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x8ccbde);
+    window.DEBUG_SCENE = scene;
+    scene.background = new THREE.Color(0x000000);
 
     const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 500);
-    camera.position.set(40, 30, 40);
-
+    camera.position.set(67, 45, 28);
+    // {x: 66.78404318138197, y: 20.99447765024143, z: 28.278813248693112}
+    window.DEBUG_CAMERA = camera;
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
     // Output encoding is important for GLTF colors to look correct
@@ -24,7 +29,7 @@ export function initRobotScene(container) {
     container.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.set(0, 20, 0);
+    controls.target.set(0, 0, 0);
     controls.update();
 
     // 1. Increase AmbientLight (lifts overall darkness globally)
@@ -98,7 +103,9 @@ function buildRobotKinematics(scene) {
 
     // J6: Gripper Pivot
     robotParts.j6 = new THREE.Group();
-    robotParts.j6.position.y = L3;
+    robotParts.j6.position.z = 2.4;
+    robotParts.j6.position.y = 1.6;
+    // robotParts.j6.rotation.x = THREE.MathUtils.degToRad(10);
     robotParts.j5.add(robotParts.j6);
 
     robotParts.gripperJaw = new THREE.Group();
@@ -111,6 +118,8 @@ function buildRobotKinematics(scene) {
     scene.add(new THREE.AxesHelper(5)); // World Origin
     robotParts.j2.add(new THREE.AxesHelper(3));
     robotParts.j3.add(new THREE.AxesHelper(3));
+    robotParts.j5.add(new THREE.AxesHelper(7));
+    robotParts.j6.add(new THREE.AxesHelper(7));
 }
 
 /**
@@ -170,6 +179,8 @@ function loadGLTFModels() {
     loader.load('./models/Jaw.glb', (gltf) => {
         const mesh = gltf.scene;
         mesh.rotation.y = THREE.MathUtils.degToRad(-90);
+        mesh.position.z = -2.6;
+        mesh.position.y = 14.5;
         // mesh.rotation.x = THREE.MathUtils.degToRad(-90);
         robotParts.gripperJaw.add(mesh);
     });
@@ -179,6 +190,10 @@ function loadGLTFModels() {
  * Maps physical servo angles to Three.js local coordinate radians.
  * This remains exactly the same as before!
  */
+const mapRange = (value, inMin, inMax, outMin, outMax) => {
+  return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
+};
+
 export function updateJointAngle(jointId, angleDeg) {
     if (!robotParts[jointId]) return;
 
@@ -202,5 +217,8 @@ export function updateJointAngle(jointId, angleDeg) {
         case 'j5': // WRIST ROLL (Rotates on Y)
             robotParts.j5.rotation.y = rad;
             break;
+        case 'j6':
+            let angle = mapRange(angleDeg, 0, 180, 0, 45);
+            robotParts.j6.rotation.x = THREE.MathUtils.degToRad(angle);
     }
 }
