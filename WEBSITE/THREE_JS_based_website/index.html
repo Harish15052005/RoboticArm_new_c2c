@@ -6,67 +6,269 @@
     <title>6-DOF Robotic Arm | Control Dashboard</title>
     <style>
         :root {
-            --bg-color: #121212; --ui-bg: #1e1e1e; --panel-bg: #2d2d2d;
-            --text-color: #e0e0e0; --text-muted: #888; --border: #444;
-            --accent: #41b4f7; --accent-hover: #00ecfd; --canvas-bg: #151515;
-            --target-ok: #03dac6; --target-err: #cf6679;
+            --bg-color: #121212; 
+            --ui-bg: #1e1e1e; 
+            --panel-bg: #2d2d2d;
+            --text-color: #e0e0e0; 
+            --text-muted: #888; 
+            --border: #444;
+            --accent: #41b4f7; 
+            --accent-hover: #00ecfd; 
+            --canvas-bg: #151515;
+            --target-ok: #03dac6; 
+            --target-err: #cf6679;
         }
         
         body {
-            margin: 0; padding: 0; overflow: hidden;
-            background-color: var(--bg-color); color: var(--text-color);
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden;
+            background-color: var(--bg-color); 
+            color: var(--text-color);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex; height: 100vh; width: 100vw;
+            display: flex; 
+            height: 100vh; 
+            width: 100vw;
         }
 
         #ui-container {
-            flex: 0 0 55%; background-color: var(--ui-bg); border-right: 1px solid var(--border);
-            padding: 20px; box-sizing: border-box; overflow-y: auto;
-            display: flex; flex-direction: column; gap: 20px;
+            flex: 0 0 55%; 
+            background-color: var(--ui-bg); 
+            border-right: 1px solid var(--border);
+            padding: 20px; 
+            box-sizing: border-box; 
+            overflow-y: auto;
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px;
         }
 
-        #canvas-container { flex: 0 0 45%; height: 100%; position: relative; }
-        h2 { margin: 0 0 10px 0; font-size: 1.1rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        #canvas-container { 
+            flex: 0 0 45%; 
+            height: 100%; 
+            position: relative; 
+        }
 
-        .top-views { display: flex; gap: 15px; height: 250px; }
+        h2 { 
+            margin: 0 0 10px 0; 
+            font-size: 1.1rem; 
+            color: var(--text-muted); 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+        }
+
+        .top-views { 
+            display: flex; 
+            gap: 15px; 
+            height: 250px; 
+        }
+
         .view-box {
-            flex: 1; background: var(--panel-bg); border: 1px solid var(--border);
-            border-radius: 8px; display: flex; flex-direction: column; overflow: hidden;
+            flex: 1; 
+            background: var(--panel-bg); 
+            border: 1px solid var(--border);
+            border-radius: 8px; 
+            display: flex; 
+            flex-direction: column; 
+            overflow: hidden;
         }
-        .view-header { background: var(--border); padding: 5px 10px; font-size: 0.85rem; font-weight: bold; display: flex; justify-content: space-between; }
-        canvas { width: 100%; height: 100%; background: var(--canvas-bg); cursor: crosshair; }
 
-        .middle-tables { display: flex; gap: 15px; }
-        .table-box { flex: 1; background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: center; }
-        th { border-bottom: 1px solid var(--accent); padding: 6px; color: var(--accent); }
-        td { border-bottom: 1px solid var(--border); padding: 6px; font-family: monospace; }
-        tr:last-child td { border-bottom: none; }
+        .view-header { 
+            background: var(--border); 
+            padding: 5px 10px; 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+            display: flex; 
+            justify-content: space-between; 
+        }
 
-        .bottom-controls { display: flex; gap: 20px; background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; }
-        .sliders-grid { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 15px; }
-        .slider-group { display: flex; flex-direction: column; gap: 5px; }
-        .slider-header { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: bold; }
-        .slider-val { color: var(--accent); font-family: monospace; }
-        input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
-        input[type="range"]:disabled { opacity: 0.3; cursor: not-allowed; }
+        canvas { 
+            width: 100%; 
+            height: 100%; 
+            background: var(--canvas-bg); 
+            cursor: crosshair; 
+        }
 
-        .toggles-container { width: 180px; display: flex; flex-direction: column; justify-content: center; gap: 15px; border-left: 1px solid var(--border); padding-left: 15px; }
-        .toggle-row { display: flex; flex-direction: column; gap: 8px; }
-        .toggle-label { font-size: 0.85rem; font-weight: bold; }
-        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--border); transition: .4s; border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(26px); }
+        .middle-tables { 
+            display: flex; 
+            gap: 15px; 
+        }
+
+        .table-box { 
+            flex: 1; 
+            background: var(--panel-bg); 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            padding: 10px; 
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 0.85rem; 
+            text-align: center; 
+        }
+
+        th { 
+            border-bottom: 1px solid var(--accent); 
+            padding: 6px; 
+            color: var(--accent); 
+        }
+
+        td { 
+            border-bottom: 1px solid var(--border); 
+            padding: 6px; 
+            font-family: monospace; 
+        }
+
+        tr:last-child td { 
+            border-bottom: none; 
+        }
+
+        .bottom-controls { 
+            display: flex; 
+            gap: 20px; 
+            background: var(--panel-bg); 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            padding: 15px; 
+        }
+
+        .sliders-grid { 
+            flex: 1; 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            grid-template-rows: repeat(2, 1fr); 
+            gap: 15px; 
+        }
+
+        .slider-group { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 5px; 
+        }
+
+        .slider-header { 
+            display: flex; 
+            justify-content: space-between; 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+        }
+
+        .slider-val { 
+            color: var(--accent); 
+            font-family: monospace; 
+        }
+
+        input[type="range"] { 
+            width: 100%; 
+            accent-color: var(--accent); 
+            cursor: pointer; 
+        }
+
+        input[type="range"]:disabled { 
+            opacity: 0.3; 
+            cursor: not-allowed; 
+        }
+
+        .toggles-container { 
+            width: 180px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            gap: 15px; 
+            border-left: 1px solid var(--border); 
+            padding-left: 15px; 
+        }
+
+        .toggle-row { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+        }
+
+        .toggle-label { 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+        }
+
+        .switch { 
+            position: relative; 
+            display: inline-block; 
+            width: 50px; 
+            height: 24px; 
+        }
+
+        .switch input { 
+            opacity: 0; 
+            width: 0; 
+            height: 0; 
+        }
+
+        .slider { 
+            position: absolute; 
+            cursor: pointer; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background-color: var(--border); 
+            transition: .4s; 
+            border-radius: 24px; 
+        }
+
+        .slider:before { 
+            position: absolute; 
+            content: ""; 
+            height: 16px; 
+            width: 16px; 
+            left: 4px; 
+            bottom: 4px; 
+            background-color: white; 
+            transition: .4s; 
+            border-radius: 50%; 
+        }
+
+        input:checked + .slider { 
+            background-color: var(--accent); 
+        }
+
+        input:checked + .slider:before { 
+            transform: translateX(26px); 
+        }
         
-        .ws-input-group { display: flex; flex-direction: column; gap: 4px; }
-        .ws-input-group label { font-size: 0.75rem; color: var(--text-muted); font-weight: bold; }
-        .ws-input-group input { font-size: 0.8rem; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border); padding: 6px; border-radius: 4px; }
+        .ws-input-group { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 4px; 
+        }
 
-        .ik-hint { color: var(--target-ok); font-size: 0.8rem; font-weight: normal; margin-left: 10px; display: none; }
-        #mode-toggle:checked ~ * .ik-hint { display: inline; }
+        .ws-input-group label { 
+            font-size: 0.75rem; 
+            color: var(--text-muted); 
+            font-weight: bold; 
+        }
+
+        .ws-input-group input { 
+            font-size: 0.8rem; 
+            background: var(--bg-color); 
+            color: var(--text-color); 
+            border: 1px solid var(--border); 
+            padding: 6px; 
+            border-radius: 4px; 
+        }
+
+        .ik-hint { 
+            color: var(--target-ok); 
+            font-size: 0.8rem; 
+            font-weight: bold; 
+            margin-left: 10px; 
+            display: none; 
+        }
+
+        #mode-toggle:checked ~ * .ik-hint { 
+            display: inline; 
+        }
     </style>
 
     <script type="importmap">
@@ -82,7 +284,7 @@
 
     <div id="ui-container">
         <section>
-            <h2>6 DOF Manipulator Arm <span id="ik-controls-hint" class="ik-hint">(Click canvas, WASD to move, Pitch Slider/QE for Phi)</span></h2>
+            <h2>6 DOF Manipulator Arm <span id="ik-controls-hint" class="ik-hint"></span></h2>
             <div class="top-views">
                 <div class="view-box">
                     <div class="view-header"><span>Top View</span> <span>YAW</span></div>
@@ -158,7 +360,6 @@
 
         <section>
             <h2>BY <br>Kumawat Harish</h2>
-            
         </section>
 
     </div>
@@ -171,40 +372,75 @@
         const container = document.getElementById('canvas-container');
         initRobotScene(container);
 
-        // Constants from ESP32 & robot-scene.js
-        const BASE_HEIGHT = 11.41; // 5.610 + 5.8 
-        const L1 = 10.50; const L2 = 12.9; const L3 = 16.25;
-        const DEG2RAD = Math.PI / 180; const RAD2DEG = 180 / Math.PI;
-        const SCALE = 4.0; // Draw scaling
+        const BASE_HEIGHT = 11.41; 
+        const L1 = 10.50; 
+        const L2 = 12.9; 
+        const L3 = 16.25;
+        const DEG2RAD = Math.PI / 180; 
+        const RAD2DEG = 180 / Math.PI;
+        const SCALE = 4.0; 
 
-        // System State
         let isIKMode = false;
         let isReachable = true;
+        let ikErrorReason = "";
         const armState = { s1: 70, s2: 125, s3: 105, s4: 55, s5: 180, s6: 0 };
         let target = { x: L1, y: BASE_HEIGHT - L2, phi: 0.0 };
 
-        // --- INVERSE KINEMATICS ---
+        // inverse kinematics solver
         function solveIK(x, y, phiDeg) {
+            if (y < 0) {
+                ikErrorReason = "Ground Collision (Target below 0)";
+                return false;
+            }
+
             let phi = phiDeg * DEG2RAD;
             let wx = x - L3 * Math.cos(phi);
             let wy = (y - BASE_HEIGHT) - L3 * Math.sin(phi);
+
+            if (wy < 0 && Math.abs(wx) < 5) {
+                ikErrorReason = "Base Collision (Wrist too close to base)";
+                return false;
+            }
+
             let d = Math.sqrt(wx * wx + wy * wy);
 
-            if (d > L1 + L2 || d < Math.abs(L1 - L2)) return false;
+            if (d > L1 + L2) {
+                ikErrorReason = "Out of Reach (Too far)";
+                return false;
+            }
+            if (d < Math.abs(L1 - L2)) {
+                ikErrorReason = "Out of Reach (Too close)";
+                return false;
+            }
 
             let shoulderRad = Math.atan2(wy, wx) + Math.acos((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d));
             let elbowRad = Math.PI - Math.acos((L1 * L1 + L2 * L2 - d * d) / (2 * L1 * L2));
             
-            armState.s2 = Math.round(shoulderRad * RAD2DEG);
-            armState.s3 = Math.round(elbowRad * RAD2DEG);
-            
-            armState.s4 = Math.round(phiDeg - armState.s2 + armState.s3 + 90);
-            if(armState.s4 < 0) armState.s4 = 0; if(armState.s4 > 180) armState.s4 = 180;
+            let tempS2 = Math.round(shoulderRad * RAD2DEG);
+            let tempS3 = Math.round(elbowRad * RAD2DEG);
+            let tempS4 = Math.round(phiDeg - tempS2 + tempS3 + 90);
 
+            if (tempS2 < 0 || tempS2 > 180) {
+                ikErrorReason = "Shoulder limits exceeded";
+                return false;
+            }
+            if (tempS3 < 0 || tempS3 > 160) {
+                ikErrorReason = "Elbow limits exceeded";
+                return false;
+            }
+            if (tempS4 < 0 || tempS4 > 180) {
+                ikErrorReason = "Wrist Pitch bounds exceeded";
+                return false;
+            }
+
+            armState.s2 = tempS2;
+            armState.s3 = tempS3;
+            armState.s4 = tempS4;
+            ikErrorReason = "";
             return true;
         }
 
-        // --- FORWARD KINEMATICS & RENDER ---
+        // update on screen telemetry and visualizations
         function updateTelemetry() {
             let rad1 = armState.s2 * DEG2RAD;
             let rad2 = (armState.s2 - armState.s3) * DEG2RAD;
@@ -217,7 +453,8 @@
 
             const sideC = document.getElementById('side-canvas');
             const sCtx = sideC.getContext('2d');
-            sideC.width = sideC.clientWidth; sideC.height = sideC.clientHeight;
+            sideC.width = sideC.clientWidth; 
+            sideC.height = sideC.clientHeight;
             sCtx.clearRect(0, 0, sideC.width, sideC.height);
             
             function mapToCanvas(mathPt) {
@@ -227,55 +464,104 @@
                 };
             }
 
-            let c0 = mapToCanvas(p0); let c1 = mapToCanvas(p1);
-            let c2 = mapToCanvas(p2); let c3 = mapToCanvas(p3);
+            let c0 = mapToCanvas(p0); 
+            let c1 = mapToCanvas(p1);
+            let c2 = mapToCanvas(p2); 
+            let c3 = mapToCanvas(p3);
             let cBase = mapToCanvas({x: 0, y: 0});
 
-            sCtx.strokeStyle = '#777777'; sCtx.lineWidth = 12; sCtx.lineCap = 'square';
-            sCtx.beginPath(); sCtx.moveTo(cBase.x, cBase.y); sCtx.lineTo(c0.x, c0.y); sCtx.stroke();
+            sCtx.strokeStyle = '#777777'; 
+            sCtx.lineWidth = 12; 
+            sCtx.lineCap = 'square';
+            sCtx.beginPath(); 
+            sCtx.moveTo(cBase.x, cBase.y); 
+            sCtx.lineTo(c0.x, c0.y); 
+            sCtx.stroke();
 
-            sCtx.strokeStyle = '#41b4f7'; sCtx.lineWidth = 6; sCtx.lineCap = 'round';
-            sCtx.beginPath(); sCtx.moveTo(c0.x, c0.y); sCtx.lineTo(c1.x, c1.y);
-            sCtx.lineTo(c2.x, c2.y); sCtx.lineTo(c3.x, c3.y); sCtx.stroke();
+            sCtx.strokeStyle = '#41b4f7'; 
+            sCtx.lineWidth = 6; 
+            sCtx.lineCap = 'round';
+            sCtx.beginPath(); 
+            sCtx.moveTo(c0.x, c0.y); 
+            sCtx.lineTo(c1.x, c1.y);
+            sCtx.lineTo(c2.x, c2.y); 
+            sCtx.lineTo(c3.x, c3.y); 
+            sCtx.stroke();
 
             sCtx.fillStyle = '#ffffff';
-            [c0, c1, c2].forEach(pt => { sCtx.beginPath(); sCtx.arc(pt.x, pt.y, 4, 0, Math.PI * 2); sCtx.fill(); });
+            [c0, c1, c2].forEach(pt => { 
+                sCtx.beginPath(); 
+                sCtx.arc(pt.x, pt.y, 4, 0, Math.PI * 2); 
+                sCtx.fill(); 
+            });
+
+            const hintEl = document.getElementById('ik-controls-hint');
+            if (isIKMode) {
+                hintEl.style.display = 'inline';
+                if (isReachable) {
+                    hintEl.innerText = "(Click canvas, WASD to move, Pitch Slider/QE for Phi)";
+                    hintEl.style.color = "var(--target-ok)";
+                } else {
+                    hintEl.innerText = `${ikErrorReason}`;
+                    hintEl.style.color = "var(--target-err)";
+                }
+            } else {
+                hintEl.style.display = 'none';
+            }
 
             if (isIKMode) {
                 let cTarget = mapToCanvas({ x: target.x, y: target.y });
                 sCtx.strokeStyle = isReachable ? 'var(--target-ok)' : 'var(--target-err)';
                 sCtx.lineWidth = 2;
                 sCtx.beginPath();
-                sCtx.moveTo(cTarget.x - 10, cTarget.y); sCtx.lineTo(cTarget.x + 10, cTarget.y);
-                sCtx.moveTo(cTarget.x, cTarget.y - 10); sCtx.lineTo(cTarget.x, cTarget.y + 10);
+                sCtx.moveTo(cTarget.x - 10, cTarget.y); 
+                sCtx.lineTo(cTarget.x + 10, cTarget.y);
+                sCtx.moveTo(cTarget.x, cTarget.y - 10); 
+                sCtx.lineTo(cTarget.x, cTarget.y + 10);
                 sCtx.stroke();
                 
-                sCtx.beginPath(); sCtx.moveTo(cTarget.x, cTarget.y);
+                sCtx.beginPath(); 
+                sCtx.moveTo(cTarget.x, cTarget.y);
                 let cTargetTail = mapToCanvas({ 
                     x: target.x - 6 * Math.cos(target.phi * DEG2RAD), 
                     y: target.y - 6 * Math.sin(target.phi * DEG2RAD) 
                 });
-                sCtx.lineTo(cTargetTail.x, cTargetTail.y); sCtx.stroke();
+                sCtx.lineTo(cTargetTail.x, cTargetTail.y); 
+                sCtx.stroke();
             } else {
                 sCtx.fillStyle = 'var(--target-err)';
-                sCtx.beginPath(); sCtx.arc(c3.x, c3.y, 6, 0, Math.PI * 2); sCtx.fill();
+                sCtx.beginPath(); 
+                sCtx.arc(c3.x, c3.y, 6, 0, Math.PI * 2); 
+                sCtx.fill();
             }
 
             const topC = document.getElementById('top-canvas');
             const tCtx = topC.getContext('2d');
-            topC.width = topC.clientWidth; topC.height = topC.clientHeight;
+            topC.width = topC.clientWidth; 
+            topC.height = topC.clientHeight;
             tCtx.clearRect(0, 0, topC.width, topC.height);
             tCtx.translate(topC.width / 2, topC.height - 30);
 
             let yawRad = (90 - armState.s1) * DEG2RAD;
             let extension = p3.x * SCALE; 
 
-            tCtx.strokeStyle = '#cccccc'; tCtx.lineWidth = 4; tCtx.lineCap = 'round';
-            tCtx.beginPath(); tCtx.moveTo(0, 0);
-            tCtx.lineTo(extension * Math.sin(yawRad), -extension * Math.cos(yawRad)); tCtx.stroke();
+            tCtx.strokeStyle = '#cccccc'; 
+            tCtx.lineWidth = 4; 
+            tCtx.lineCap = 'round';
+            tCtx.beginPath(); 
+            tCtx.moveTo(0, 0);
+            tCtx.lineTo(extension * Math.sin(yawRad), -extension * Math.cos(yawRad)); 
+            tCtx.stroke();
 
-            tCtx.fillStyle = '#41b4f7'; tCtx.beginPath(); tCtx.arc(0, 0, 8, 0, Math.PI * 2); tCtx.fill();
-            tCtx.fillStyle = 'var(--target-err)'; tCtx.beginPath(); tCtx.arc(extension * Math.sin(yawRad), -extension * Math.cos(yawRad), 5, 0, Math.PI*2); tCtx.fill();
+            tCtx.fillStyle = '#41b4f7'; 
+            tCtx.beginPath(); 
+            tCtx.arc(0, 0, 8, 0, Math.PI * 2); 
+            tCtx.fill();
+            tCtx.fillStyle = 'var(--target-err)'; 
+            tCtx.beginPath(); 
+            tCtx.arc(extension * Math.sin(yawRad), -extension * Math.cos(yawRad), 5, 0, Math.PI*2); 
+            tCtx.fill();
+
 
             ['s1', 's2', 's3', 's4', 's5', 's6'].forEach(s => {
                 let displayVal = armState[s];
@@ -296,13 +582,9 @@
             okEl.style.color = isReachable ? "var(--target-ok)" : "var(--target-err)";
         }
 
-        
-        
-        // --- INTERACTIVITY LOGIC ---
-
+        // inverse kinematics toggle logic
         document.getElementById('mode-toggle').addEventListener('change', (e) => {
             isIKMode = e.target.checked;
-            document.getElementById('ik-controls-hint').style.display = isIKMode ? 'inline' : 'none';
             
             ['s2', 's3'].forEach(s => { document.getElementById(`slider-${s}`).disabled = isIKMode; });
             
@@ -314,10 +596,13 @@
                 target.x = L1 * Math.cos(rad1) + L2 * Math.cos(rad2) + L3 * Math.cos(phiRad);
                 target.y = BASE_HEIGHT + L1 * Math.sin(rad1) + L2 * Math.sin(rad2) + L3 * Math.sin(phiRad);
                 target.phi = phiRad * RAD2DEG;
+                
+                isReachable = true;
             }
             updateTelemetry();
         });
 
+        // inverse kinematics mouse and keyboard controls
         document.getElementById('side-canvas').addEventListener('mousedown', (e) => {
             if(!isIKMode) return;
             const canvas = document.getElementById('side-canvas');
@@ -344,6 +629,7 @@
             updateTelemetry();
         });
 
+        // slider event listeners
         ['s1', 's2', 's3', 's4', 's5', 's6'].forEach(s => {
             document.getElementById(`slider-${s}`).addEventListener('input', (e) => {
                 let val = parseInt(e.target.value);
@@ -359,39 +645,36 @@
             });
         });
 
-        // --- WEBSOCKET LOGIC ---
+        // websocket logic
         let ws = null;
         let wsConnected = false;
         const wsToggle = document.getElementById('ws-toggle');
         const wsUrlInput = document.getElementById('ws-url');
-
-        // Load saved URL from localStorage
         const savedUrl = localStorage.getItem('esp32_ws_url');
+        
         if (savedUrl) {
             wsUrlInput.value = savedUrl;
         } else {
             wsUrlInput.value = "ws://192.168.1.100:81";
         }
 
-        // Save URL to localStorage when changed
         wsUrlInput.addEventListener('input', (e) => {
             localStorage.setItem('esp32_ws_url', e.target.value);
         });
 
         wsToggle.addEventListener('change', (e) => {
             if (e.target.checked) {
-                // Safety Warning Check
                 const proceed = confirm(
                     "SAFETY WARNING\n\n" +
                     "You are about to transmit live commands to the physical robot.\n\n" +
-                    "1. Ensure the PHYSICAL arm is currently resting in the EXACT SAME POSE as the digital twin to avoid violent jerks or stripped gears.\n" +
+                    "1. Ensure the PHYSICAL arm is resting in the EXACT SAME POSE as the digital twin to avoid violent jerks.\n" +
                     "2. Keep hands and objects clear of the robot's workspace.\n" +
                     "3. Ensure power supplies are stable.\n\n" +
                     "Do you wish to proceed?"
                 );
 
                 if (!proceed) {
-                    e.target.checked = false; // Revert toggle
+                    e.target.checked = false;
                     return;
                 }
 
@@ -426,7 +709,6 @@
 
         setInterval(() => {
             if (wsConnected && ws.readyState === WebSocket.OPEN) {
-                // Payload format: "s1,s2,s3,s4,s5,s6" (e.g. "90,90,90,90,180,30")
                 const payload = `${armState.s1},${armState.s2},${armState.s3},${armState.s4},${armState.s5},${armState.s6}`;
                 ws.send(payload);
             }
