@@ -30,6 +30,7 @@ export function initRobotScene(container) {
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.set(0, 0, 0);
+    controls.target.set(0, 0, 0);
     controls.update();
 
     // 1. Increase AmbientLight (lifts overall darkness globally)
@@ -115,7 +116,7 @@ function buildRobotKinematics(scene) {
 
     // We optionally add small AxesHelpers to each joint so you can see the invisible pivots.
     // Red=X, Green=Y, Blue=Z. Comment these out once your models look right.
-    scene.add(new THREE.AxesHelper(5)); // World Origin
+    scene.add(new THREE.AxesHelper(10)); // World Origin
     robotParts.j2.add(new THREE.AxesHelper(3));
     robotParts.j3.add(new THREE.AxesHelper(3));
     robotParts.j5.add(new THREE.AxesHelper(7));
